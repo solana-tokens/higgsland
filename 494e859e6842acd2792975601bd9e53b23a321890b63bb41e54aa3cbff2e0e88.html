@@ -1,0 +1,1031 @@
+<div class="chat-container">
+    <!-- Sidebar -->
+    <div class="sidebar-chat">
+        <div class="sidebar-chat-header">
+            <button class="new-chat-btn btn btn-primary" onclick="showNewChatModal()">
+                <i class="bi bi-plus-lg"></i>
+                {{ _('New Chat') }}
+            </button>
+        </div>
+        <div class="chats-list" id="chatsList">
+            <div style="text-align: center; padding: 20px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">{{ _('Loading...') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="no-chat-selected">
+            {{ _('Select a chat or create a new one') }}
+        </div>
+    </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="modal fade" id="newChatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('New Chat') }}</h5>
+                <button type="button" class="btn-close" onclick="closeModal('newChatModal')"></button>
+            </div>
+            <form id="newChatForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="chatTitle" class="form-label">{{ _('Chat Title') }}</label>
+                        <input type="text" class="form-control" id="chatTitle" required>
+                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('newChatModal')">
+                        {{ _('Cancel') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">{{ _('Create') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Chat Modal -->
+<div class="modal fade" id="deleteChatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Delete Chat') }}</h5>
+                <button type="button" class="btn-close" onclick="closeModal('deleteChatModal')"></button>
+            </div>
+            <div class="modal-body">
+                {{ _('Are you sure you want to delete chat') }} "<span id="deleteChatName"></span>"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deleteChatModal')">
+                    {{ _('Cancel') }}
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">{{ _('Delete') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Chat Modal -->
+<div class="modal fade" id="editChatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Edit Chat') }}</h5>
+                <button type="button" class="btn-close" onclick="closeModal('editChatModal')"></button>
+            </div>
+            <form id="editChatForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editChatId">
+                    <div class="mb-3">
+                        <label for="editChatTitle" class="form-label">{{ _('Chat Title') }}</label>
+                        <input type="text" class="form-control" id="editChatTitle" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editChatModal')">
+                        {{ _('Cancel') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .file-preview-container {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        flex-wrap: wrap;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+
+    .file-preview-item {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+    }
+
+    .file-preview-item.uploading {
+        opacity: 0.6;
+    }
+
+    .file-preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .file-preview-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .file-preview-icon i {
+        font-size: 32px;
+        margin-bottom: 4px;
+    }
+
+    .file-preview-icon .file-ext {
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #6c757d;
+    }
+
+    .file-preview-remove {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(220, 53, 69, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0;
+        line-height: 1;
+        z-index: 10;
+    }
+
+    .file-preview-remove:hover {
+        background: rgba(220, 53, 69, 1);
+    }
+
+    .file-upload-spinner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .attach-btn {
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .attach-btn:hover {
+        background: #f8f9fa;
+        color: #495057;
+    }
+
+    .attach-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .input-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .input-controls {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .message-files {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+
+    .message-file {
+        max-width: 200px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .message-file.image {
+        max-height: 200px;
+        border: 1px solid #dee2e6;
+    }
+
+    .message-file.image:hover {
+        opacity: 0.9;
+    }
+
+    .message-file.document {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s;
+    }
+
+    .message-file.document:hover {
+        background: #e9ecef;
+    }
+
+    .message-file-icon {
+        font-size: 24px;
+    }
+
+    .message-file-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .message-file-name {
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+    }
+
+    .message-file-ext {
+        font-size: 11px;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+
+    /* Цвета для разных типов файлов */
+    .file-icon-pdf { color: #dc3545; }
+    .file-icon-doc { color: #0d6efd; }
+    .file-icon-xls { color: #198754; }
+    .file-icon-txt { color: #6c757d; }
+    .file-icon-zip { color: #ffc107; }
+    .file-icon-code { color: #6f42c1; }
+    .file-icon-default { color: #adb5bd; }
+</style>
+
+<script>
+    let ws = null;
+    let currentChatId = null;
+    let isConnecting = false;
+    let selectedFiles = [];
+    let uploadingFiles = 0;
+
+    const headers = {
+        'Authorization': `Bearer {{ token }}`,
+        'Content-Type': 'application/json'
+    };
+
+    // Определение типа файла и иконки
+    function getFileTypeInfo(filename, mimeType) {
+        const ext = filename.split('.').pop().toLowerCase();
+        
+        const typeMap = {
+            // Images
+            'jpg': { icon: 'bi-file-image', class: 'file-icon-default', type: 'image' },
+            'jpeg': { icon: 'bi-file-image', class: 'file-icon-default', type: 'image' },
+            'png': { icon: 'bi-file-image', class: 'file-icon-default', type: 'image' },
+            'gif': { icon: 'bi-file-image', class: 'file-icon-default', type: 'image' },
+            'webp': { icon: 'bi-file-image', class: 'file-icon-default', type: 'image' },
+            'svg': { icon: 'bi-file-image', class: 'file-icon-default', type: 'image' },
+            
+            // Documents
+            'pdf': { icon: 'bi-file-pdf', class: 'file-icon-pdf', type: 'document' },
+            'doc': { icon: 'bi-file-word', class: 'file-icon-doc', type: 'document' },
+            'docx': { icon: 'bi-file-word', class: 'file-icon-doc', type: 'document' },
+            'xls': { icon: 'bi-file-excel', class: 'file-icon-xls', type: 'document' },
+            'xlsx': { icon: 'bi-file-excel', class: 'file-icon-xls', type: 'document' },
+            'ppt': { icon: 'bi-file-ppt', class: 'file-icon-doc', type: 'document' },
+            'pptx': { icon: 'bi-file-ppt', class: 'file-icon-doc', type: 'document' },
+            'txt': { icon: 'bi-file-text', class: 'file-icon-txt', type: 'document' },
+            
+            // Archives
+            'zip': { icon: 'bi-file-zip', class: 'file-icon-zip', type: 'document' },
+            'rar': { icon: 'bi-file-zip', class: 'file-icon-zip', type: 'document' },
+            '7z': { icon: 'bi-file-zip', class: 'file-icon-zip', type: 'document' },
+            
+            // Code
+            'js': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'py': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'java': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'cpp': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'html': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'css': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'json': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+            'xml': { icon: 'bi-file-code', class: 'file-icon-code', type: 'document' },
+        };
+
+        const info = typeMap[ext] || { icon: 'bi-file-earmark', class: 'file-icon-default', type: 'document' };
+        
+        // Проверяем MIME type для изображений
+        if (mimeType && mimeType.startsWith('image/')) {
+            info.type = 'image';
+        }
+        
+        return { ...info, ext };
+    }
+
+    // Загрузка файла на сервер
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('{{ url }}/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer {{ token }}`
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                return result.data.url; // Возвращаем URL загруженного файла
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            showError('{{ _("Error uploading file") }}: ' + file.name);
+            return null;
+        }
+    }
+
+    // Загрузка списка чатов
+    async function fetchChats() {
+        try {
+            const response = await fetch('{{ url }}/chats', {
+                method: 'GET',
+                headers: headers
+            });
+
+            const result = await response.json();
+            const chatsList = document.getElementById('chatsList');
+            chatsList.innerHTML = '';
+
+            if (result.data.length === 0) {
+                chatsList.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #999;">
+                        {{ _('No chats yet') }}
+                    </div>
+                `;
+                return;
+            }
+
+            result.data.forEach(chat => {
+                const chatItem = document.createElement('div');
+                chatItem.className = `chat-item ${currentChatId === chat.id ? 'active' : ''}`;
+                chatItem.id = `chat-item-${chat.id}`
+                chatItem.innerHTML = `
+                    <div class="chat-item-content" onclick="selectChat(${chat.id})">
+                        <div class="chat-item-title">${chat.title}</div>
+                    </div>
+                    <div class="chat-item-actions">
+                        <button class="chat-item-btn" onclick="editChat(${chat.id}, '${chat.title}')" title="{{ _('Edit') }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="chat-item-btn" onclick="deleteChat(${chat.id}, '${chat.title}')" title="{{ _('Delete') }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                chatsList.appendChild(chatItem);
+            });
+        } catch (error) {
+            console.error('Error fetching chats:', error);
+            showError('{{ _("Error loading chats") }}');
+        }
+    }
+
+    // Выбор чата
+    async function selectChat(chatId) {
+        if (currentChatId === chatId) return;
+
+        // Закрываем предыдущее WebSocket соединение
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+
+        currentChatId = chatId;
+        selectedFiles = []; // Очищаем выбранные файлы
+
+        // Обновляем активный чат в списке
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        const chat_item = document.getElementById(`chat-item-${chatId}`)
+        if (chat_item) {
+            chat_item.classList.add('active');
+        }
+
+        // Загружаем чат
+        try {
+            const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = `
+            <div class="no-chat-selected">
+                {{ _('Loading...') }}
+            </div>
+            `
+            const response = await fetch(`{{ url }}/chats/${chatId}`, {
+                method: 'GET',
+                headers: headers
+            });
+
+            const chat = await response.json();
+
+            // Отображаем чат
+            renderChat(chat.data);
+
+            // Подключаемся к WebSocket
+            connectWebSocket(chatId);
+        } catch (error) {
+            console.error('Error loading chat:', error);
+            showError('{{ _("Error loading chat") }}');
+        }
+    }
+
+    // Отрисовка чата
+    function renderChat(chat) {
+        const mainContent = document.getElementById('mainContent');
+        mainContent.innerHTML = `
+            <div class="chat-header">
+                <div class="chat-title-block">
+                    <h5 style="margin: 0;">${chat.chat.title}</h5>
+                </div>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                ${chat.messages.length === 0 ?
+                    '<div class="empty-state"><div class="empty-state-icon">💬</div><div>{{ _("Start the conversation") }}</div></div>'
+                    : ''}
+            </div>
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
+                    <div class="input-controls">
+                        <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFileSelect(event)">
+                        <button class="attach-btn" onclick="document.getElementById('fileInput').click()" id="attachBtn" title="{{ _('Attach files (max 4)') }}">
+                            <i class="bi bi-paperclip" style="font-size: 20px;"></i>
+                        </button>
+                        <textarea 
+                            id="messageInput" 
+                            class="message-input" 
+                            placeholder="{{ _('Type your message...') }}"
+                            rows="1"
+                            onkeydown="handleKeyPress(event)"
+                            style="flex: 1;"
+                        ></textarea>
+                        <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        chat.messages.forEach(message => {
+            appendMessage(message);
+        });
+
+        scrollToBottom();
+    }
+
+    // Обработка выбора файлов
+    async function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        
+        // Ограничение до 4 файлов
+        const remainingSlots = 4 - selectedFiles.length;
+        const filesToAdd = files.slice(0, remainingSlots);
+        
+        for (const file of filesToAdd) {
+            uploadingFiles++;
+            
+            // Добавляем файл с временным ID для отображения
+            const tempId = Date.now() + Math.random();
+            const fileInfo = getFileTypeInfo(file.name, file.type);
+            
+            const fileData = {
+                id: tempId,
+                name: file.name,
+                type: fileInfo.type,
+                icon: fileInfo.icon,
+                iconClass: fileInfo.class,
+                ext: fileInfo.ext,
+                url: null,
+                uploading: true
+            };
+            
+            // Для изображений создаем временный preview
+            if (fileInfo.type === 'image') {
+                fileData.preview = URL.createObjectURL(file);
+            }
+            
+            selectedFiles.push(fileData);
+            updateFilePreview();
+            
+            // Загружаем файл
+            const url = await uploadFile(file);
+            uploadingFiles--;
+            
+            if (url) {
+                // Обновляем данные файла
+                const fileIndex = selectedFiles.findIndex(f => f.id === tempId);
+                if (fileIndex !== -1) {
+                    selectedFiles[fileIndex].url = url;
+                    selectedFiles[fileIndex].uploading = false;
+                    
+                    // Для изображений обновляем preview на настоящий URL
+                    if (fileInfo.type === 'image') {
+                        URL.revokeObjectURL(selectedFiles[fileIndex].preview);
+                        selectedFiles[fileIndex].preview = url;
+                    }
+                    
+                    updateFilePreview();
+                }
+            } else {
+                // Удаляем файл при ошибке загрузки
+                const fileIndex = selectedFiles.findIndex(f => f.id === tempId);
+                if (fileIndex !== -1) {
+                    if (selectedFiles[fileIndex].preview) {
+                        URL.revokeObjectURL(selectedFiles[fileIndex].preview);
+                    }
+                    selectedFiles.splice(fileIndex, 1);
+                    updateFilePreview();
+                }
+            }
+        }
+        
+        event.target.value = ''; // Сброс input
+    }
+
+    // Обновление превью файлов
+    function updateFilePreview() {
+        const container = document.getElementById('filePreviewContainer');
+        const attachBtn = document.getElementById('attachBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        if (selectedFiles.length === 0) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            if (attachBtn) attachBtn.disabled = false;
+            if (sendBtn) sendBtn.disabled = false;
+            return;
+        }
+        
+        container.style.display = 'flex';
+        container.innerHTML = '';
+        
+        selectedFiles.forEach((file, index) => {
+            const previewItem = document.createElement('div');
+            previewItem.className = `file-preview-item ${file.uploading ? 'uploading' : ''}`;
+            
+            let content = '';
+            
+            if (file.type === 'image' && file.preview) {
+                content = `<img src="${file.preview}" alt="${file.name}">`;
+            } else {
+                content = `
+                    <div class="file-preview-icon">
+                        <i class="bi ${file.icon} ${file.iconClass}"></i>
+                        <div class="file-ext">${file.ext}</div>
+                    </div>
+                `;
+            }
+            
+            previewItem.innerHTML = content;
+            
+            if (file.uploading) {
+                const spinner = document.createElement('div');
+                spinner.className = 'file-upload-spinner spinner-border spinner-border-sm text-primary';
+                previewItem.appendChild(spinner);
+            } else {
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'file-preview-remove';
+                removeBtn.title = '{{ _("Remove") }}';
+                removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                removeBtn.onclick = () => removeFile(index);
+                previewItem.appendChild(removeBtn);
+            }
+            
+            container.appendChild(previewItem);
+        });
+        
+        // Отключаем кнопки если есть загружающиеся файлы или достигнут лимит
+        if (attachBtn) {
+            attachBtn.disabled = selectedFiles.length >= 4 || uploadingFiles > 0;
+        }
+        if (sendBtn) {
+            sendBtn.disabled = uploadingFiles > 0;
+        }
+    }
+
+    // Удаление файла из выбранных
+    function removeFile(index) {
+        if (selectedFiles[index].preview && selectedFiles[index].type === 'image') {
+            URL.revokeObjectURL(selectedFiles[index].preview);
+        }
+        selectedFiles.splice(index, 1);
+        updateFilePreview();
+    }
+
+    // Очистка выбранных файлов
+    function clearSelectedFiles() {
+        selectedFiles.forEach(file => {
+            if (file.preview && file.type === 'image') {
+                URL.revokeObjectURL(file.preview);
+            }
+        });
+        selectedFiles = [];
+        updateFilePreview();
+    }
+
+    // Добавление сообщения в UI
+    function appendMessage(message) {
+        const messagesContainer = document.getElementById('messagesContainer');
+
+        // Удаляем empty state если есть
+        const emptyState = messagesContainer.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${message.role}`;
+
+        let filesHtml = '';
+        if (message.files && message.files.length > 0) {
+            filesHtml = '<div class="message-files">';
+            message.files.forEach((file) => {
+                const fileInfo = getFileTypeInfo(file.name || 'file', '');
+                
+                if (fileInfo.type === 'image') {
+                    filesHtml += `
+                        <img src="${file.url}" 
+                             class="message-file image" 
+                             alt="${file.name || 'Image'}" 
+                             onclick="window.open('${file.url}', '_blank')">
+                    `;
+                } else {
+                    filesHtml += `
+                        <a href="${file.url}" 
+                           target="_blank" 
+                           class="message-file document">
+                            <i class="bi ${fileInfo.icon} ${fileInfo.iconClass} message-file-icon"></i>
+                            <div class="message-file-info">
+                                <div class="message-file-name">${file.name || 'Document'}</div>
+                                <div class="message-file-ext">${fileInfo.ext}</div>
+                            </div>
+                        </a>
+                    `;
+                }
+            });
+            filesHtml += '</div>';
+        }
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">
+                ${message.role === 'user' ? 'U' : 'AI'}
+            </div>
+            <div>
+                ${message.content ? `<div class="message-content">${escapeHtml(message.content)}</div>` : ''}
+                ${filesHtml}
+            </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // Показать индикатор печатания
+    function showTypingIndicator() {
+        const messagesContainer = document.getElementById('messagesContainer');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message assistant';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+            <div class="message-avatar">AI</div>
+            <div class="loading-indicator">
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        `;
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    // Скрыть индикатор печатания
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // Подключение к WebSocket
+    function connectWebSocket(chatId) {
+        if (isConnecting || ws) return;
+
+        isConnecting = true;
+        const wsUrl = `{{ url }}/chats/${chatId}/ws`.replace('http', 'ws').replace('https', 'wss');
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+            isConnecting = false;
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            document.getElementById('sendBtn').disabled = false;
+
+            if (data.type === 'phase') {
+                // Обновляем фазу
+                const phaseBadge = document.querySelector('.chat-phase-badge');
+                if (phaseBadge) {
+                    phaseBadge.textContent = data.phase;
+                }
+            } else if (data.type === 'assistant_message') {
+                hideTypingIndicator();
+                appendMessage(data);
+            } else if (data.type === 'message_received') {
+                showTypingIndicator();
+            } else if (data.type === 'error') {
+                hideTypingIndicator();
+                showError(data.content);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            isConnecting = false;
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            ws = null;
+            isConnecting = false;
+        };
+    }
+
+    // Отправка сообщения
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
+
+        if ((!content && selectedFiles.length === 0) || !ws || ws.readyState !== WebSocket.OPEN || uploadingFiles > 0) {
+            return;
+        }
+
+        // Подготавливаем данные сообщения
+        const messageData = {
+            message: content
+        };
+
+        // Добавляем файлы если они есть
+        if (selectedFiles.length > 0) {
+            messageData.files = selectedFiles.map(file => ({
+                url: file.url,
+                name: file.name,
+                type: file.type
+            }));
+        }
+
+        // Отправляем сообщение
+        ws.send(JSON.stringify(messageData));
+
+        // Добавляем сообщение в UI
+        const displayMessage = {
+            role: 'user',
+            content: content,
+            created_at: new Date().toISOString()
+        };
+
+        if (selectedFiles.length > 0) {
+            displayMessage.files = selectedFiles.map(file => ({
+                url: file.url,
+                name: file.name
+            }));
+        }
+
+        appendMessage(displayMessage);
+
+        // Очищаем поле ввода и файлы
+        input.value = '';
+        input.style.height = 'auto';
+        clearSelectedFiles();
+
+        // Отключаем кнопку отправки
+        document.getElementById('sendBtn').disabled = true;
+        showTypingIndicator()
+    }
+
+    // Обработка нажатия Enter
+    function handleKeyPress(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            if (!document.getElementById('sendBtn').disabled){
+                sendMessage();
+            }
+        }
+    }
+
+    // Автоматическое изменение высоты textarea
+    document.addEventListener('input', (e) => {
+        if (e.target.id === 'messageInput') {
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+        }
+    });
+
+    // Создание нового чата
+    function showNewChatModal() {
+        openModal('newChatModal');
+    }
+
+    document.getElementById('newChatForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('chatTitle').value;
+
+        try {
+            const response = await fetch('{{ url }}/chats', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    title: title,
+                })
+            });
+            const result = await response.json();
+
+            if (result.status === "success") {
+                closeModal('newChatModal');
+                document.getElementById('newChatForm').reset();
+                await fetchChats();
+                await selectChat(result.data.id);
+            } else {
+                showError('{{ _("Error creating chat") }}');
+            }
+        } catch (error) {
+            console.error('Error creating chat:', error);
+            showError('{{ _("Error creating chat") }}');
+        }
+    });
+
+    // Редактирование чата
+    function editChat(id, title) {
+        event.stopPropagation();
+        document.getElementById('editChatId').value = id;
+        document.getElementById('editChatTitle').value = title;
+        openModal('editChatModal');
+    }
+
+    document.getElementById('editChatForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('editChatId').value;
+        const title = document.getElementById('editChatTitle').value;
+
+        try {
+            const response = await fetch(`{{ url }}/chats/${id}`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify({
+                    title: title,
+                })
+            });
+            const result = await response.json();
+
+            if (result.status === "success") {
+                closeModal('editChatModal');
+                await fetchChats();
+
+                // Обновляем заголовок если это текущий чат
+                if (currentChatId == id) {
+                    const header = document.querySelector('.chat-header h5');
+                    if (header) header.textContent = title;
+                }
+            } else {
+                showError('{{ _("Error updating chat") }}');
+            }
+        } catch (error) {
+            console.error('Error updating chat:', error);
+            showError('{{ _("Error updating chat") }}');
+        }
+    });
+
+    // Удаление чата
+    function deleteChat(id, title) {
+        event.stopPropagation();
+        document.getElementById('deleteChatName').textContent = title;
+        document.getElementById('confirmDeleteBtn').onclick = () => startDeleteChat(id);
+        openModal('deleteChatModal');
+    }
+
+    async function startDeleteChat(id) {
+        try {
+            const response = await fetch(`{{ url }}/chats/${id}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            const result = await response.json();
+
+            if (result.status === "success") {
+                closeModal('deleteChatModal');
+
+                // Если удаляем текущий чат, закрываем его
+                if (currentChatId == id) {
+                    if (ws) ws.close();
+                    currentChatId = null;
+                    document.getElementById('mainContent').innerHTML = `
+                        <div class="no-chat-selected">
+                            {{ _('Select a chat or create a new one') }}
+                        </div>
+                    `;
+                }
+
+                await fetchChats();
+            } else {
+                showError('{{ _("Error deleting chat") }}');
+            }
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+            showError('{{ _("Error deleting chat") }}');
+        }
+    }
+
+    // Утилиты
+    function scrollToBottom() {
+        const container = document.getElementById('messagesContainer');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        let escaped = div.innerHTML;
+
+        // Сохраняем переносы строк
+        escaped = escaped.replace(/\n/g, '<br>');
+
+        // Сохраняем множественные пробелы
+        escaped = escaped.replace(/  /g, ' &nbsp;');
+
+        // Сохраняем табуляцию
+        escaped = escaped.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+
+        return escaped;
+    }
+
+    // Инициализация
+    window.onload = () => {
+        fetchChats();
+    };
+
+    // Закрытие WebSocket при уходе со страницы
+    window.onbeforeunload = () => {
+        if (ws) ws.close();
+        // Очищаем URL объектов изображений
+        selectedFiles.forEach(file => {
+            if (file.preview && file.type === 'image') {
+                URL.revokeObjectURL(file.preview);
+            }
+        });
+    };
+</script>
